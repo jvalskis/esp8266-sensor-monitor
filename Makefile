@@ -12,7 +12,11 @@ SKETCH              ?= $(PROJECT_DIR)/src/Arduino.ino
 
 LIBS = $(ESP_LIBS)/Wire \
 	$(ESP_LIBS)/ESP8266WiFi \
+	$(ESP_LIBS)/SPI \
 	$(USER_LIB_PATH)/Adafruit-BMP085-Library \
+	$(USER_LIB_PATH)/Adafruit_BMP280_Library \
+	$(USER_LIB_PATH)/Grove_BME280 \
+	$(USER_LIB_PATH)/Adafruit_Sensor \
 	$(USER_LIB_PATH)/ArduinoJson/src \
 	$(USER_LIB_PATH)/DHT-sensor-library \
 	$(USER_LIB_PATH)/LinkedList \

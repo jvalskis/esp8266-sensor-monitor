@@ -12,12 +12,21 @@ MQTTConnector::MQTTConnector(Client &client, const char *id, const char *server,
 	mqttClient.setCallback(callback);
 }
 
-void MQTTConnector::publish(const char *topic, const char *data) {
-	Serial.print(F("Publishing stuff to topic "));
-	Serial.println(topic);
-	Serial.print(F("Stuff: "));
+bool MQTTConnector::publish(const char *topic, const char *data) {
+	Serial.print(F("Publishing. Topic: "));
+	Serial.print(topic);
+	Serial.print(F(", content: "));
 	Serial.println(data);
-	mqttClient.publish(topic, data);
+	return mqttClient.publish(topic, data);
+}
+
+bool MQTTConnector::publish(const char *topic, std::function<void(JsonObject&)> jsonProvider) {
+	StaticJsonBuffer<JSON_BUFFER_SIZE> jsonBuffer;
+	JsonObject &root = jsonBuffer.createObject();
+	jsonProvider(root);
+	char buffer[root.measureLength() + 1];
+	root.printTo(buffer, root.measureLength() + 1);
+	return publish(topic, buffer);
 }
 
 void MQTTConnector::subscribe(const char *topic, MQTTHandler *handler) {}

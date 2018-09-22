@@ -9,9 +9,11 @@ class BMP180SensorReader : public SensorReader {
 	Adafruit_BMP085 bmp;
 
 	public:
-	BMP180SensorReader();
-	bool initialize();
-	void read(JsonObject &jsonObject);
+	BMP180SensorReader(String name);
+	
+	protected:
+	bool initializeSensor();
+	void readSensor(JsonObject &jsonObject);
 };
 
 #endif

@@ -9,8 +9,11 @@ class DHT11SensorReader : public SensorReader {
 	DHT dht;
 
 	public:
-	DHT11SensorReader(uint8_t pin);
-	void read(JsonObject &jsonObject);
+	DHT11SensorReader(String name, uint8_t pin);
+
+	protected:
+	bool initializeSensor();
+	void readSensor(JsonObject &jsonObject);
 };
 
 #endif

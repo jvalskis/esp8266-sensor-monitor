@@ -2,14 +2,16 @@
 #define _WIFI_CONNECTOR_H
 
 #include <ESP8266WiFi.h>
+#include "LedFeedback.h"
 
 class WifiConnector {
-	public:
-	WifiConnector();
-	boolean connect(const char *ssid, const char *password);
-
 	private:
-	void blink(int timeout);
+	LedFeedback ledFeedback;
+
+	public:
+	WifiConnector(LedFeedback &ledFeedback);
+	bool connect(const char *ssid, const char *password);
+
 };
 
 #endif

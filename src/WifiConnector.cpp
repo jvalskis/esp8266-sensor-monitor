@@ -1,49 +1,30 @@
 #include "WifiConnector.h"
 
-WifiConnector::WifiConnector() {}
+WifiConnector::WifiConnector(LedFeedback &ledFeedback): ledFeedback{ledFeedback} {}
 
-boolean WifiConnector::connect(const char *ssid, const char *password) {
-	WiFi.mode(WIFI_STA);
-	WiFi.disconnect();
-	delay(100);
-
-	Serial.println(F("Trying Connect to Router"));
-	Serial.print(F("SSID: "));
+bool WifiConnector::connect(const char *ssid, const char *password) {
+	Serial.println(F("WIFI: Trying to connect. SSID: "));
 	Serial.println(ssid);
-	Serial.print(F("Waiting"));
 
 	WiFi.persistent(false);
-	WiFi.mode(WIFI_OFF);  // this is a temporary line, to be removed after SDK
-	                      // update to 1.5.4
 	WiFi.mode(WIFI_STA);
 	WiFi.begin(ssid, password);
 
 	int attempts = 60;
+	Serial.print(F("Connecting"));
 	while (WiFi.status() != WL_CONNECTED) {
-		blink(250);
+		ledFeedback.blinkFast(1);
 		Serial.print(F("."));
 		if (attempts-- < 0) {
-			Serial.print(F("Cannot connect to specified WiFi, status is "));
+			Serial.print(F("WIFI: could not connect. Status: "));
 			Serial.println(WiFi.status());
 			return false;
 		}
 	}
 
-	blink(100);
-	blink(100);
-	blink(100);
+	ledFeedback.blinkFast(3);
 
-	Serial.println(F(""));
-	Serial.println(F("WiFi connected"));
-	Serial.print(F("IP address: "));
-	Serial.print(WiFi.localIP());
-	Serial.println(F(""));
+	Serial.print(F("WIFI: connected. IP address: "));
+	Serial.println(WiFi.localIP());
 	return true;
-}
-
-void WifiConnector::blink(int length) {
-	digitalWrite(LED_BUILTIN, LOW);
-	delay(length);
-	digitalWrite(LED_BUILTIN, HIGH);
-	delay(length);
 }

@@ -1,12 +1,12 @@
 #ifndef _MQTT_CONNECTOR_H
 #define _MQTT_CONNECTOR_H
 
-#define MQTT_MAX_PACKET_SIZE 256
-
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
 #include "LinkedList.h"
 #include "MessageHandler.h"
+#include "Properties.h"
+#include <ArduinoJson.h>
 
 #define STATUS_CONNECTED "connected"
 #define STATUS_DISCONNECTED "disconnected"
@@ -25,7 +25,8 @@ class MQTTConnector {
 	public:
 	MQTTConnector(Client &client, const char *id, const char *server,
 	              uint16_t port, const char *user, const char *pass);
-	void publish(const char *topic, const char *data);
+	bool publish(const char *topic, const char *data);
+	bool publish(const char *topic, std::function<void(JsonObject&)> jsonProvider);
 	void subscribe(const char *topic, MQTTHandler *handler);
 	void onConnect(std::function<void()> handler);
 	void loop();

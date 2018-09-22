@@ -2,33 +2,36 @@
 
 #include <SimpleTimer.h>
 #include <Wire.h>
-#include "BMP180SensorReader.h"
-#include "DHT11SensorReader.h"
+#include "sensors/BMP180SensorReader.h"
+#include "sensors/BMP280SensorReader.h"
+#include "sensors/BME280SeedSensorReader.h"
+#include "sensors/DHT11SensorReader.h"
+#include "sensors/TSL2561SensorReader.h"
+#include "sensors/DeviceInfoReader.h"
 #include "MQTTConnector.h"
 #include "Properties.h"
-#include "TSL2561SensorReader.h"
 #include "WifiConnector.h"
-
-#define PIN_DHT 12
-#define PIN_SDA 4
-#define PIN_SCL 5
-
-ADC_MODE(ADC_VCC);
+#include "LedFeedback.h"
 
 WiFiClient client;
-MQTTConnector mqttConnector(client, SOURCE_ID, MQTT_SERVER, MQTT_SERVER_PORT,
-                            MQTT_USERNAME, MQTT_PASSWORD);
+MQTTConnector mqttConnector(client, SOURCE_ID, MQTT_SERVER, MQTT_SERVER_PORT, MQTT_USERNAME, MQTT_PASSWORD);
 
 SimpleTimer timer;
-DHT11SensorReader dht11SensorReader(PIN_DHT);
-BMP180SensorReader bmp180SensorReader;
-TSL2561SensorReader tsl2561SensorReader;
+DeviceInfoReader deviceInfoReader(SOURCE_ID);
+DHT11SensorReader dht11SensorReader("DHT", PIN_DHT);
+BMP180SensorReader bmp180SensorReader("BMP1");
+BMP280SensorReader bmp280SensorReader("BMP2");
+BME280SeedSensorReader bme280SeedSensorReader("BME2");
+TSL2561SensorReader tsl2561SensorReader("TSL");
 
-void printFreeHeap();
+LedFeedback feedback(LED_BUILTIN);
+
 void mqttRunnerCallback();
-void readSensorData();
-void publishAttributes();
+void errorCallback();
 void scanI2C();
+
+void publishTelemetry();
+void publishAttributes();
 
 void setup() {
 	pinMode(LED_BUILTIN, OUTPUT);
@@ -39,52 +42,48 @@ void setup() {
 
 	scanI2C();
 
-	tsl2561SensorReader.initialize();
-	bmp180SensorReader.initialize();
-
-	WifiConnector connector;
+	feedback.ledOn();
+	
+	WifiConnector connector(feedback);
 	if (!connector.connect(WIFI_SSID, WIFI_PASSWORD)) {
+		timer.setInterval(500, []() { feedback.ledToggle(); });
 		return;
 	}
 
 	mqttConnector.onConnect(publishAttributes);
 
-	timer.setInterval(1000, &mqttRunnerCallback);
-	timer.setInterval(60000, &readSensorData);
+	timer.setInterval(1000, mqttRunnerCallback);
+	timer.setInterval(INTERVAL_PUBLISH_TELEMETRY, publishTelemetry);
+
+	feedback.ledOff();
 }
 
 void loop() { timer.run(); }
 
-void publishAttributes() {
-	StaticJsonBuffer<100> jsonBuffer;
-	JsonObject &root = jsonBuffer.createObject();
-	root["firmware_version"] = FIRMWARE_VERSION;
-	root["serial_number"] = ESP.getChipId();
-	root["name"] = SOURCE_ID;
-	char buffer[root.measureLength() + 1];
-	root.printTo(buffer, root.measureLength() + 1);
-	mqttConnector.publish(TOPIC_ATTRIBUTES, buffer);
+void readAttributes(JsonObject &jsonObject) {
+	deviceInfoReader.readAttributes(jsonObject);
 }
 
-void readSensorData() {
-	digitalWrite(LED_BUILTIN, LOW);
-	Serial.print(F("Reading sensor data... "));
-	StaticJsonBuffer<200> jsonBuffer;
-	JsonObject &root = jsonBuffer.createObject();
-	tsl2561SensorReader.read(root);
-	bmp180SensorReader.read(root);
-	dht11SensorReader.read(root);
-	Serial.println(F("DONE"));
+void readTelemetry(JsonObject &jsonObject) {
+	tsl2561SensorReader.read(jsonObject);
+	bmp180SensorReader.read(jsonObject);
+	bmp280SensorReader.read(jsonObject);
+	bme280SeedSensorReader.read(jsonObject);
+	dht11SensorReader.read(jsonObject);
+	deviceInfoReader.read(jsonObject);
+}
 
-	root["free_heap"] = ESP.getFreeHeap();
-	root["vcc"] = ESP.getVcc() / 1000.0;
-	char buffer[root.measureLength() + 1];
-	root.printTo(buffer, root.measureLength() + 1);
+void publishAttributes() {
+	mqttConnector.publish(TOPIC_ATTRIBUTES, readAttributes);
+}
 
-	Serial.print(F("Publishing sensor data... "));
-	mqttConnector.publish(TOPIC_TELEMETRY, buffer);
-	Serial.println(F("DONE"));
-	digitalWrite(LED_BUILTIN, HIGH);
+void publishTelemetry() {
+	feedback.ledOn();
+	bool result = mqttConnector.publish(TOPIC_TELEMETRY, readTelemetry);
+	if (!result) {
+		feedback.blinkFast(3);
+	}
+	feedback.ledOff();
 }
 
 void mqttRunnerCallback() { mqttConnector.loop(); }

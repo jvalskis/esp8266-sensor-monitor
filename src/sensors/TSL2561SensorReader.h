@@ -15,11 +15,13 @@ class TSL2561SensorReader : public SensorReader {
 	TSL2561 tsl;
 
 	public:
-	TSL2561SensorReader(
+	TSL2561SensorReader(String name,
 	    tsl2561Gain_t gain = TSL2561_GAIN_0X,
 	    tsl2561IntegrationTime_t timing = TSL2561_INTEGRATIONTIME_13MS);
-	boolean initialize();
-	void read(JsonObject &jsonObject);
+	
+	protected:
+	bool initializeSensor();
+	void readSensor(JsonObject &jsonObject);
 };
 
 #endif
